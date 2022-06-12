@@ -1,0 +1,118 @@
+SQL> -- ---------------------------------------------------------------
+SQL> --
+SQL> -- Name: Ethan Grant
+SQL> --
+SQL> -- ------------------------------------------------------------
+SQL> --
+SQL> /*(16A) Hint: A NULL in the hours column should be considered as zero hours.
+SQL> Find the ssn, lname, and the total number of hours worked on projects for every employee whose total is less than 40 hours. Sort the result by lname
+SQL> */
+SQL> SELECT E.ssn, E.Lname, sum(W.Hours)
+  2  FROM Employee E, Works_On W
+  3  WHERE E.ssn = W.Essn
+  4  GROUP BY E.Ssn, E.Lname
+  5  HAVING sum(W.Hours) < 40
+  6  ORDER BY E.Lname ASC;
+
+SSN       LNAME           SUM(W.HOURS)                                          
+--------- --------------- ------------                                          
+987654321 Wallace                   35                                          
+
+SQL> --
+SQL> ------------------------------------
+SQL> --
+SQL> /*(17A)
+SQL> For every project that has more than 2 employees working on it: Find the project number, project name, number of employees working on it, and the total number of hours worked by all employees on that project. Sort the results by project number.
+SQL> */
+SQL> SELECT P.Pnumber, P.Pname, COUNT(W.Essn), sum(W.Hours)
+  2  FROM Project P, Works_On W
+  3  WHERE   W.Pno = P.Pnumber
+  4  GROUP BY P.Pnumber, P.Pname
+  5  HAVING COUNT(W.Essn) > 2
+  6  ORDER BY P.Pnumber;
+
+   PNUMBER PNAME           COUNT(W.ESSN) SUM(W.HOURS)                           
+---------- --------------- ------------- ------------                           
+         2 ProductY                    3         37.5                           
+        10 Computerization             3           55                           
+        20 Reorganization              3           25                           
+        30 Newbenefits                 3           55                           
+
+SQL> --
+SQL> -- CORRELATED SUBQUERY --------------------------------
+SQL> --
+SQL> /*(18A)
+SQL> For every employee who has the highest salary in their department: Find the dno, ssn, lname, and salary. Sort the results by department number.
+SQL> */
+SQL> SELECT E.Dno, E.Ssn, E.Lname, E.Salary
+  2  FROM Employee E
+  3  WHERE E.Salary =
+  4  	   (SELECT MAX(E1.Salary)
+  5  	    FROM Employee E1
+  6  	    WHERE E1.Dno = E.Dno)
+  7  ORDER BY E.Dno;
+
+       DNO SSN       LNAME               SALARY                                 
+---------- --------- --------------- ----------                                 
+         1 888665555 Borg                 55000                                 
+         4 987654321 Wallace              43000                                 
+         5 333445555 Wong                 40000                                 
+
+SQL> --
+SQL> -- NON-CORRELATED SUBQUERY -------------------------------
+SQL> --
+SQL> /*(19A)
+SQL> For every employee who does not work on any project that is located in Houston: Find the ssn and lname. Sort the results by lname
+SQL> */
+SQL> SELECT E.Ssn, E.Lname
+  2  FROM Employee E, Dept_Locations D
+  3  WHERE E.Dno = D.Dnumber AND
+  4  	   D.Dlocation NOT IN (SELECT D.Dlocation
+  5  			       FROM Dept_Locations D
+  6  			       WHERE D.Dlocation = 'Houston')
+  7  ORDER BY E.Lname ASC;
+
+SSN       LNAME                                                                 
+--------- ---------------                                                       
+453453453 English                                                               
+453453453 English                                                               
+987987987 Jabbar                                                                
+666884444 Narayan                                                               
+666884444 Narayan                                                               
+123456789 Smith                                                                 
+123456789 Smith                                                                 
+987654321 Wallace                                                               
+333445555 Wong                                                                  
+333445555 Wong                                                                  
+999887777 Zelaya                                                                
+
+11 rows selected.
+
+SQL> --
+SQL> -- DIVISION ---------------------------------------------
+SQL> --
+SQL> /*(20A) Hint: This is a DIVISION query
+SQL> For every employee who works on every project that is located in Stafford: Find the ssn and lname. Sort the results by lname
+SQL> */
+SQL> SELECT E.Ssn, E.Lname
+  2  FROM Employee E
+  3  WHERE NOT EXISTS ((SELECT P.Plocation
+  4  			FROM Project P
+  5  			WHERE P.Plocation = 'Stafford')
+  6  			MINUS
+  7  			(SELECT P.Plocation
+  8  			 FROM Project P, Works_On W
+  9  			 WHERE	P.Plocation = 'Stafford' AND
+ 10  				W.Essn = E.Ssn		 AND
+ 11  				W.Pno = P.Pnumber))
+ 12  ORDER BY E.Lname ASC;
+
+SSN       LNAME                                                                 
+--------- ---------------                                                       
+987987987 Jabbar                                                                
+987654321 Wallace                                                               
+333445555 Wong                                                                  
+999887777 Zelaya                                                                
+
+SQL> --
+SQL> SET ECHO OFF

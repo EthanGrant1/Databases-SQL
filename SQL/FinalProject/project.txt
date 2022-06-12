@@ -1,0 +1,3015 @@
+SQL> /*
+SQL> CIS 353 - Database Design Project
+SQL> Austin Ackermann
+SQL> Ethan Grant
+SQL> Thanh Tran
+SQL> Ben Ziegler
+SQL> */
+SQL> CREATE TABLE Customers
+  2  (
+  3  customerID INTEGER PRIMARY KEY,
+  4  firstName CHAR(15) NOT NULL,
+  5  lastName CHAR(15) NOT NULL,
+  6  address CHAR(50) NOT NULL,
+  7  phone CHAR(25),
+  8  email CHAR(50),
+  9  --
+ 10  -- Integrity Constraints
+ 11  --
+ 12  -- custIDLen: Customer IDs are 6 digits long
+ 13  CONSTRAINT custIDLen CHECK ((customerID >= 100000) AND (customerID <= 999999)),
+ 14  --
+ 15  -- custPhoneSyntax: Phone numbers are of the form (xxx) xxx-xxxx
+ 16  CONSTRAINT custPhoneSyntax CHECK (phone LIKE '(%)%-%'),
+ 17  --
+ 18  -- custEmailSyntax: Emails are of the form xxx@xxx.xxx (ex: someguy123@mymail.net)
+ 19  CONSTRAINT custEmailSyntax CHECK (email LIKE '%@%.%')
+ 20  );
+
+Table created.
+
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE Stores
+  2  (
+  3  storeNum INTEGER PRIMARY KEY,
+  4  address CHAR(50) NOT NULL,
+  5  district CHAR(50) NOT NULL,
+  6  region CHAR(50) NOT NULL,
+  7  storeSize CHAR(20) NOT NULL,
+  8  --
+  9  -- Integrity Constraints
+ 10  --
+ 11  -- storeDistRegion: Store districts and regions must belong to one another.
+ 12  -- (note: There are 3 regions, each with 3 districts in them. D1-1 belongs to R1, D2-1 to R2, D3-1 to R3 etc.)
+ 13  CONSTRAINT storeDistRegion CHECK
+ 14  ((region IN ('R1') AND district IN ('D1-1', 'D1-2', 'D1-3')) OR (region IN ('R2') AND district IN ('D2-1', 'D2-2', 'D2-3')) OR
+ 15  (region IN ('R3') AND district IN ('D3-1', 'D3-2', 'D3-3'))),
+ 16  --
+ 17  -- properStoreSize: Store sizes must be small, medium, or large
+ 18  CONSTRAINT properStoreSize CHECK (storeSize IN ('small', 'medium', 'large'))
+ 19  );
+
+Table created.
+
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE Items (
+  2  serialNum INTEGER PRIMARY KEY,
+  3  description CHAR(1000) NOT NULL,
+  4  name CHAR(255) NOT NULL,
+  5  rentalRate CHAR(15) NOT NULL,
+  6  --
+  7  -- Integrity Constraints
+  8  --
+  9  -- itemSerialLen: Item serial numbers are 6 digits long
+ 10  CONSTRAINT itemSerialLen CHECK ((serialNum >= 100000) AND (serialNum <= 999999))
+ 11  );
+
+Table created.
+
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE Orders (
+  2  orderNum INTEGER PRIMARY KEY,
+  3  orderDate CHAR(15) NOT NULL,
+  4  lineID INTEGER NOT NULL,
+  5  managerID INTEGER NOT NULL,
+  6  --
+  7  -- Integrity Constraints
+  8  --
+  9  -- orderNumLen: Order numbers are 6 digits long
+ 10  CONSTRAINT orderNumLen CHECK ((orderNum >= 100000) AND (orderNum <= 999999)),
+ 11  --
+ 12  -- orderDateSyntax: Order dates are of the form mm/dd/yyyy (ex: 01/01/2000)
+ 13  CONSTRAINT orderDateSyntax CHECK (orderDate LIKE '%/%/%')
+ 14  );
+
+Table created.
+
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE Managers (
+  2  managerID INTEGER PRIMARY KEY,
+  3  firstName CHAR(15) NOT NULL,
+  4  lastName CHAR(15) NOT NULL,
+  5  gender CHAR(25) NOT NULL,
+  6  age INTEGER NOT NULL,
+  7  phone CHAR(25) NOT NULL,
+  8  role CHAR(25) NOT NULL,
+  9  --
+ 10  -- Integrity Constraints
+ 11  --
+ 12  -- managerIDLen: Manager IDs are 6 digits long
+ 13  CONSTRAINT managerIDLen CHECK ((managerID >= 100000) AND (managerID <= 999999)),
+ 14  --
+ 15  -- managerPhoneSyntax: Phone numbers are of the form (xxx) xxx-xxxx
+ 16  CONSTRAINT managerPhoneSyntax CHECK (phone LIKE '(%)%-%'),
+ 17  --
+ 18  -- managerRole: Manager roles must be 'general', 'district', or 'regional'
+ 19  CONSTRAINT managerRole CHECK (role IN ('general', 'district', 'regional')),
+ 20  --
+ 21  -- managerAge: Managers must be at least 20 years old, 25 if they are district, and 30 years for regional.
+ 22  CONSTRAINT managerAge CHECK ((age > 20 AND role = 'general') OR (age > 25 AND role = 'district') OR (age > 30 AND role = 'regional'))
+ 23  );
+
+Table created.
+
+SQL> --
+SQL> -- orderManagerIDFK: managerID is a foreign key that references Managers managerID
+SQL> ALTER TABLE Orders ADD CONSTRAINT orderManagerIDFK FOREIGN KEY (managerID) REFERENCES Managers(managerID)
+  2  ON DELETE CASCADE;
+
+Table altered.
+
+SQL> --
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE Employees (
+  2  employeeID INTEGER PRIMARY KEY,
+  3  firstName CHAR(25) NOT NULL,
+  4  lastName CHAR(15) NOT NULL,
+  5  gender CHAR(25) NOT NULL,
+  6  age INTEGER NOT NULL,
+  7  phone CHAR(25) NOT NULL,
+  8  storeNum INTEGER NOT NULL,
+  9  --
+ 10  -- Integrity Constraints
+ 11  --
+ 12  -- employeeIDLen: Employee IDs are 6 digits long
+ 13  CONSTRAINT employeeIDLen CHECK ((employeeID >= 100000) AND (employeeID <= 999999)),
+ 14  --
+ 15  -- employeePhoneSyntax: Phone numbers are of the form (xxx) xxx-xxxx
+ 16  CONSTRAINT employeePhoneSyntax CHECK (phone LIKE '(%)%-%'),
+ 17  --
+ 18  -- employeeStoreFK: Store numbers are foreign keys that reference Stores(storeNum)
+ 19  CONSTRAINT employeeStoreFK FOREIGN KEY (storeNum) REFERENCES Stores(storeNum)
+ 20  ON DELETE CASCADE
+ 21  );
+
+Table created.
+
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE OrderLines (
+  2  lineID INTEGER NOT NULL,
+  3  orderNum INTEGER NOT NULL,
+  4  itemOrdered INTEGER NOT NULL,
+  5  qty INTEGER NOT NULL,
+  6  storeNum INTEGER NOT NULL,
+  7  shipmentType CHAR(25) NOT NULL,
+  8  price CHAR(15) NOT NULL,
+  9  daysToShip INTEGER NOT NULL,
+ 10  --
+ 11  -- Integrity Constraints
+ 12  --
+ 13  -- orderLineCK: OrderLines have a composite key of both the lineID and the orderNum
+ 14  CONSTRAINT orderLineCK PRIMARY KEY (lineID, orderNum),
+ 15  --
+ 16  -- orderLineIDLen: Order Line IDs are 6 digits long
+ 17  CONSTRAINT orderLineIDLen CHECK ((lineID >= 100000) AND (lineID <= 999999)),
+ 18  --
+ 19  -- orderLineOrderFK: orderNum is a foreign key that references Orders(orderNum)
+ 20  CONSTRAINT orderLineOrderFK FOREIGN KEY (orderNum) REFERENCES Orders (orderNum)
+ 21  ON DELETE CASCADE,
+ 22  --
+ 23  -- orderLineItemNameFK: itemOrdered is a foreign key that references Items(serialNum)
+ 24  CONSTRAINT orderLineItemNameFK FOREIGN KEY (itemOrdered) REFERENCES Items(serialNum)
+ 25  ON DELETE CASCADE,
+ 26  --
+ 27  -- orderLineQty: qty is greater than 0
+ 28  CONSTRAINT orderLineQty CHECK (qty > 0),
+ 29  --
+ 30  -- orderLineStoreFK: storeNum is a foreign key that references Stores(storeNum)
+ 31  CONSTRAINT orderLineStoreFK FOREIGN KEY (storeNum) REFERENCES Stores(storeNum)
+ 32  ON DELETE CASCADE,
+ 33  --
+ 34  -- orderLineShipmentType: shipmentType must be 'regular', 'express', or 'same-day'
+ 35  CONSTRAINT orderLineShipmentType CHECK (shipmentType IN ('regular', 'express', 'same-day')),
+ 36  --
+ 37  -- orderLinePriceSyntax: OrderLine costs are of the form $x.xx (ex: $5.99, $375.55, etc)
+ 38  CONSTRAINT orderLinePriceSyntax CHECK (price LIKE '$%.%'),
+ 39  --
+ 40  -- orderLineShipmentTime: Different shipment types have differing amounts of shipping time (regular: 5+ days, express: 3 days, same-day: 1 day)
+ 41  --
+ 42  CONSTRAINT orderLineShipmentTime
+ 43  CHECK ((shipmentType = 'regular' AND daysToShip >= 5)   OR
+ 44  (shipmentType = 'express' AND daysToShip = 3)   OR
+ 45  (shipmentType = 'same-day' AND daysToShip = 1))
+ 46  );
+
+Table created.
+
+SQL> --
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE StorePhone (
+  2  storeNum PRIMARY KEY,
+  3  phone CHAR(25) NOT NULL,
+  4  --
+  5  -- Integrity Constraints
+  6  --
+  7  --
+  8  -- storePhoneSyntax: Phone numbers are of the form (xxx) xxx-xxxx
+  9  CONSTRAINT storePhoneSyntax CHECK (phone LIKE '(%)%-%'),
+ 10  --
+ 11  -- storePhoneStoreNumFK: storeNum is a foreign key the references Stores(storeNum)
+ 12  CONSTRAINT phoneStoreNumFK FOREIGN KEY (storeNum) REFERENCES Stores(storeNum)
+ 13  ON DELETE CASCADE
+ 14  );
+
+Table created.
+
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE ItemPrices (
+  2  serialNum NOT NULL,
+  3  price CHAR(15) NOT NULL,
+  4  --
+  5  -- Integrity Constraints
+  6  --
+  7  -- itemPriceCK: The primary key is a composite of both the serial num and the price
+  8  CONSTRAINT itemPriceCK PRIMARY KEY (serialNum, price),
+  9  --
+ 10  -- itemPricesSerialNumFK: serialNum is a foreign key that references Items(serialNum)
+ 11  CONSTRAINT itemPriceSerialNumFK FOREIGN KEY (serialNum) REFERENCES Items(serialNum)
+ 12  ON DELETE CASCADE
+ 13  );
+
+Table created.
+
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE GoesTo (
+  2  customerID INTEGER,
+  3  storeNum INTEGER,
+  4  itemPurchased INTEGER NOT NULL,
+  5  quantity INTEGER,
+  6  orderedOnline CHAR(15) NOT NULL,
+  7  --
+  8  -- Integrity Constraints
+  9  --
+ 10  -- goesToCK: GoesTo has a composite key of the customerID, the storeNum, and the item purchased
+ 11  CONSTRAINT goesToCK PRIMARY KEY (customerID, storeNum, itemPurchased),
+ 12  --
+ 13  -- goesToCustomerIDFK: customerID is a foreign key that references Customers(customerID)
+ 14  CONSTRAINT goesToCustomerIDFK FOREIGN KEY (customerID) REFERENCES Customers(customerID)
+ 15  ON DELETE CASCADE,
+ 16  --
+ 17  -- goesToStoreNumFK: storeNum is a foreign key that references Stores(storeNum)
+ 18  CONSTRAINT goesToStoreNumFK FOREIGN KEY (storeNum) REFERENCES Stores(storeNum)
+ 19  ON DELETE CASCADE,
+ 20  --
+ 21  -- goesToItemPurchasedFK: itemPurchased is a foreign key that references Items(name)
+ 22  CONSTRAINT itemPurchased FOREIGN KEY (itemPurchased) REFERENCES Items(serialNum)
+ 23  ON DELETE CASCADE,
+ 24  --
+ 25  -- goesToQuantity: quantity is greater than 0
+ 26  CONSTRAINT goesToQuantity CHECK (quantity > 0),
+ 27  --
+ 28  -- goesToOrderedOnline: orderedOnline is a boolean (it can only be 'true' or 'false')
+ 29  CONSTRAINT goesToOrderedOnline CHECK (orderedOnline IN ('true', 'false'))
+ 30  );
+
+Table created.
+
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE Has (
+  2  serialNum INTEGER,
+  3  lineID INTEGER,
+  4  --
+  5  -- Integrity Constraints
+  6  --
+  7  -- HasCK: Has has a composite key of both the serialNum and the lineID
+  8  CONSTRAINT HasCK PRIMARY KEY (serialNum, lineID),
+  9  --
+ 10  -- hasSerialNumFK: serialNum is a foreign key that references Items(serialNum)
+ 11  CONSTRAINT hasSerialNumFK FOREIGN KEY (serialNum) REFERENCES Items(serialNum)
+ 12  );
+
+Table created.
+
+SQL> -- -----------------------------------------------------------------------------------
+SQL> CREATE TABLE Manages (
+  2  managerID INTEGER,
+  3  employeeID INTEGER,
+  4  --
+  5  -- Integrity Constraints
+  6  --
+  7  -- managesCK: Manages has a composite key of both the managerID and the employeeID
+  8  CONSTRAINT managesCK PRIMARY KEY (managerID, employeeID),
+  9  --
+ 10  -- managesManagerIDFK: managerID is a forgeign key that references Managers(managerID)
+ 11  CONSTRAINT managesManagerIDFK FOREIGN KEY (managerID) REFERENCES Managers(managerID),
+ 12  --
+ 13  -- managesEmployeeIDFK: employeeID is a foreign key that references Employees(employeeID)
+ 14  CONSTRAINT managesEmployeeIDFK FOREIGN KEY (employeeID) REFERENCES Employees(employeeID)
+ 15  );
+
+Table created.
+
+SQL> -- -----------------------------------------------------------------------------------
+SQL> INSERT INTO Customers VALUES (100000, 'Dave', 'Smith', '332 Michigan Ave.', '(555) 333-2222', 'dsmith@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100001, 'Joe', 'Smith', '324 Niles Ave.', '(555) 444-1111', 'jsmith@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100002, 'Max', 'Albon', '443 Lakeshore Dr.', '(555) 543-2353', 'malbon@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100003, 'Liv', 'Reeves', '3321 Lincoln Ave.', '(555) 876-0966', 'lreeves@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100004, 'Bill', 'Guy', '987 Niles Ave.', NULL, NULL);
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100005, 'Justin', 'Smith', '312 Lakeshore Ave.', '(555) 777-4545', NULL);
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100006, 'Ryan', 'Mercer', '1543 2nd St.', '(555) 652-7777', 'rmercer@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100007, 'Jack', 'Batler', '3112 6th St.', '(555) 888-8272', NULL);
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100008, 'Peyton', 'Handy', '3262 Bush Dr.', '(555) 545-7828', 'phandy@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100009, 'Jo', 'Reeves', '3001 10th St.', NULL, 'jreeves@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100010, 'Bo', 'Term', '1872 Bush Dr.', NULL, NULL);
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100011, 'Nate', 'Boon', '884 Michigan Ave.', '(555) 000-5050', NULL);
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100012, 'Kim', 'Palhamus', '4112 Lincoln Ave.', '(555) 450-4504', 'kpalhamus@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100013, 'Troy', 'Jones', '112 Michigan Ave.', '(555) 955-4222', 'tjones@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100014, 'Vic', 'Brown', '394 Lakeshore Dr.', '(555) 564-4547', 'vbrown@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100015, 'Olivia', 'Ruth', '1165 Lincoln Ave.', '(555) 840-0875', 'oruth@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100016, 'John', 'Babalon', '3920 16th St.', NULL, NULL);
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100017, 'Jon', 'Smith', '2316 Obama Dr.', NULL, NULL);
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100018, 'Frank', 'Gulag', '2562 Bush Dr.', '(555) 684-7782', 'fgulag@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100019, 'Kevin', 'Miller', '2919 7th Ave.', '(555) 457-7747', 'kmiller@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100020, 'Tina', 'Vaught', '622 Michigan Ave.', '(555) 754-7796', NULL);
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100021, 'Charlie', 'Jones', '5841 1st St.', '(555) 993-9687', 'cjones@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100022, 'Ignus', 'Victus', '855 Niles Ave.', '(555) 378-7875', 'ivictus@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100023, 'Myles', 'Tillery', '6552 14th St.', '(555) 778-6642', 'mtillery@gmail.com');
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100024, 'Izak', 'Ruddell', '2826 Bush Dr.', NULL, NULL);
+
+1 row created.
+
+SQL> INSERT INTO Customers VALUES (100025, 'Ryan', 'Haynes', '2584 15th St.', '(555) 877-4455', 'rhaynes@gmail.com');
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> INSERT INTO Stores VALUES (100000, '555 Michigan Ave.', 'D1-1', 'R1', 'large');
+
+1 row created.
+
+SQL> INSERT INTO Stores VALUES (100001, '3232 Lincoln Ave.', 'D3-1', 'R3', 'medium');
+
+1 row created.
+
+SQL> INSERT INTO Stores VALUES (100002, '423 Lakeshore Dr.', 'D1-2', 'R1', 'medium');
+
+1 row created.
+
+SQL> INSERT INTO Stores VALUES (100003, '3344 1st St.', 'D2-2', 'R2', 'small');
+
+1 row created.
+
+SQL> INSERT INTO Stores VALUES (100004, '3333 16th St.', 'D2-1', 'R2', 'medium');
+
+1 row created.
+
+SQL> INSERT INTO Stores VALUES (100005, '7684 7th St.', 'D2-3', 'R2', 'medium');
+
+1 row created.
+
+SQL> INSERT INTO Stores VALUES (100006, '9090 Obama Dr.', 'D3-2', 'R3', 'small');
+
+1 row created.
+
+SQL> INSERT INTO Stores VALUES (100007, '1231 Bush Dr.', 'D3-3', 'R3', 'large');
+
+1 row created.
+
+SQL> INSERT INTO Stores VALUES (100008, '543 Niles Ave.', 'D1-3', 'R1', 'medium');
+
+1 row created.
+
+SQL> INSERT INTO Stores VALUES (100009, '123 River Ave.', 'D3-2', 'R3', 'large');
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> INSERT INTO Items VALUES (100000, 'A top of the line console from Microsoft, the XBOX: Series X boasts up to 120FPS and 4K visuals.', 'XBOX: Series X', '$9.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (100001, 'A superior gaming console from Microsoft, the XBOX: Series S is an all digital, lightweight console for avid gamers.', 'XBOX: Series S', '$10.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (200000, 'A top gaming console from Sony, the PlayStation 5 offers up to 120FPS, stunning visuals, and incredible performance.', 'PlayStation 5', '$9.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (300000, 'The newest and best console from Nintendo. The Nintendo Switch offers incredible exclusives you wont find anywhere else.', 'Nintendo Switch', '$9.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (300001, 'For on-the-go gamers, the Nintendo Switch Lite is a dedicated handheld console that you can take anywhere.', 'Nintendo Switch Lite', '$8.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (100002, 'Shooter game for XBOX.', 'Halo Infinite', '$4.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (100003, 'Shooter game for XBOX.', 'Call of Duty Vanguard: XBOX Version', '$4.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (100004, 'Shooter game for XBOX.', 'Battlefield 2042: XBOX Version', '$4.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (200001, 'Shooter game for PlayStation 5.', 'Call of Duty Vanguard: PlayStation 5 Version', '$4.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (200002, 'Shooter game for PlayStation 5.', 'Battlefield 2042: PlayStation 5 Version', '$4.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (200003, 'Action game for PlayStation 5.', 'God of War (2018)', '$4.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (300002, 'Catch Pokemon and battle with other trainers in Pokemon: Brilliant Diamond.', 'Pokemon: Brilliant Diamond', '$4.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (300003, 'Catch Pokemon and battle with other trainers in Pokemon: Shining Pearl.', 'Pokemon: Shining Pearl', '$4.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (300004, 'Race with friends, family, and players all around the world in the newest Mario Kart game, Mario Kart 8: Deluxe.', 'Mario Kart 8: Deluxe', '$4.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (100005, 'Controller compatible with XBOX: Series X, and XBOX: Series S', 'XBOX Controller (Basic)', '$2.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (100006, 'Premium controller for XBOX', 'XBOX Elite Controller', '$2.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (200004, 'Controller for PlayStation 5', 'PlayStation 5 Controller', '$2.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (200005, 'Premium controller for PlayStation 5', 'PlayStation 5 Scuff Controller', '$2.99/mo');
+
+1 row created.
+
+SQL> INSERT INTO Items VALUES (300005, 'Controller for Nintendo Switch', 'Joy-Con Controller Pack (Pack of 2)', '$2.99/mo');
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> INSERT INTO Managers VALUES (100000, 'Peyton', 'Bitfelt', 'M', '37', '(555) 732-8911', 'regional');
+
+1 row created.
+
+SQL> INSERT INTO Managers VALUES (100001, 'Jack', 'Butler', 'M', '45', '(555) 534-6645', 'regional');
+
+1 row created.
+
+SQL> INSERT INTO Managers VALUES (100002, 'John', 'Casey', 'M', '26', '(555) 886-7444', 'district');
+
+1 row created.
+
+SQL> INSERT INTO Managers VALUES (100003, 'Olivia', 'Stevens', 'F', '21', '(555) 654-9135', 'general');
+
+1 row created.
+
+SQL> INSERT INTO Managers VALUES (100004, 'Evan', 'Bradford', 'M', '32', '(555) 774-9053', 'district');
+
+1 row created.
+
+SQL> INSERT INTO Managers VALUES (100005, 'Nate', 'Dean', 'M', '43', '(555) 987-2288', 'district');
+
+1 row created.
+
+SQL> INSERT INTO Managers VALUES (100006, 'Ryan', 'Reeves', 'M', '31', '(555) 733-6868', 'general');
+
+1 row created.
+
+SQL> INSERT INTO Managers VALUES (100007, 'Erica', 'Baptist', 'F', '29', '(555) 228-0280', 'general');
+
+1 row created.
+
+SQL> INSERT INTO Managers VALUES (100008, 'Nate', 'Marsh', 'M', '35', '(555) 820-6130', 'regional');
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> INSERT INTO Orders VALUES (100000, '10/10/2021', 100000, 100006);
+
+1 row created.
+
+SQL> INSERT INTO Orders VALUES (100001, '10/11/2021', 100001, 100006);
+
+1 row created.
+
+SQL> INSERT INTO Orders VALUES (100002, '11/09/2021', 100002, 100007);
+
+1 row created.
+
+SQL> INSERT INTO Orders VALUES (100003, '11/12/2021', 100003, 100003);
+
+1 row created.
+
+SQL> INSERT INTO Orders VALUES (100004, '11/07/2021', 100004, 100005);
+
+1 row created.
+
+SQL> INSERT INTO Orders VALUES (100005, '10/23/2021', 100005, 100003);
+
+1 row created.
+
+SQL> INSERT INTO Orders VALUES (100006, '11/16/2021', 100006, 100007);
+
+1 row created.
+
+SQL> INSERT INTO Orders VALUES (100007, '11/19/2021', 100007, 100004);
+
+1 row created.
+
+SQL> INSERT INTO Orders VALUES (100008, '10/19/2021', 100008, 100002);
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> INSERT INTO Employees VALUES (200000, 'River', 'Johnson', 'F', '21', '(555) 815-6965', 100001);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200001, 'Bob', 'Dean', 'M', '19', '(555) 833-9166', 100002);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200002, 'Bill', 'Ruiz', 'M', '42', '(555) 453-2412', 100003);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200003, 'Ryan', 'Baldwin', 'M', '32', '(555) 846-5545', 100001);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200004, 'Danielle', 'Rickwood', 'F', '19', '(555) 456-6645', 100004);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200005, 'Jill', 'Lauqus', 'F', '24', '(555) 864-6752', 100005);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200006, 'Zach', 'Miller', 'M', '28', '(555) 465-0450', 100002);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200007, 'Max', 'Miller', 'M', '31', '(555) 868-0785', 100006);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200008, 'Josh', 'Johnson', 'M', '24', '(555) 870-4454', 100007);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200009, 'Tom', 'Smith', 'M', '21', '(555) 564-6654', 100008);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200010, 'Todd', 'Batson', 'M', '44', '(555) 786-0707', 100009);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200011, 'Summer', 'Smith', 'F', '31', '(555) 868-0078', 100008);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200012, 'Pat', 'Miller', 'M', '46', '(555) 087-6680', 100001);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200013, 'Sean', 'Hitchcock', 'M', '39', '(555) 770-8875', 100008);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200014, 'Mark', 'Dean', 'M', '20', '(555) 857-7577', 100003);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200015, 'Avery', 'Ricktus', 'F', '30', '(555) 312-8785', 100005);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200016, 'Eric', 'Shellhorn', 'M', '34', '(555) 045-5466', 100006);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200017, 'Evan', 'Acker', 'M', '25', '(555) 867-5678', 100009);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200018, 'Rick', 'Doty', 'M', '18', '(555) 546-6422', 100001);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200019, 'Morty', 'Johnson', 'M', '19', '(555) 789-6456', 100008);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200020, 'Jen', 'Dipkey', 'F', '22', '(555) 444-4645', 100004);
+
+1 row created.
+
+SQL> INSERT INTO Employees VALUES (200021, 'Troy', 'Bell', 'M', '36', '(555) 678-6451', 100005);
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> INSERT INTO OrderLines VALUES (100000, 100000, 200000, 1, 100001, 'same-day', '$599.99', 1);
+
+1 row created.
+
+SQL> INSERT INTO OrderLines VALUES (100001, 100001, 100000, 1, 100005, 'express', '$1799.97', 3);
+
+1 row created.
+
+SQL> INSERT INTO OrderLines VALUES (100002, 100002, 300000, 1, 100008, 'same-day', '$299.99', 1);
+
+1 row created.
+
+SQL> INSERT INTO OrderLines VALUES (100003, 100003, 100006, 2, 100002, 'regular', '$259.98', 5);
+
+1 row created.
+
+SQL> INSERT INTO OrderLines VALUES (100004, 100004, 100002, 1, 100006, 'express', '$179.97', 3);
+
+1 row created.
+
+SQL> INSERT INTO OrderLines VALUES (100005, 100005, 300005, 4, 100002, 'same-day', '$79.99', 1);
+
+1 row created.
+
+SQL> INSERT INTO OrderLines VALUES (100006, 100006, 300004, 1, 100009, 'regular', '$299.95', 5);
+
+1 row created.
+
+SQL> INSERT INTO OrderLines VALUES (100007, 100007, 200005, 1, 100002, 'express', '$199.98', 3);
+
+1 row created.
+
+SQL> INSERT INTO OrderLines VALUES (100008, 100008, 200002, 1, 100007, 'regular', '$299.95', 5);
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> INSERT INTO StorePhone VALUES (100001, '(555) 673-9902');
+
+1 row created.
+
+SQL> INSERT INTO StorePhone VALUES (100002, '(555) 445-4534');
+
+1 row created.
+
+SQL> INSERT INTO StorePhone VALUES (100003, '(555) 673-4322');
+
+1 row created.
+
+SQL> INSERT INTO StorePhone VALUES (100004, '(555) 999-3321');
+
+1 row created.
+
+SQL> INSERT INTO StorePhone VALUES (100005, '(555) 999-6685');
+
+1 row created.
+
+SQL> INSERT INTO StorePhone VALUES (100006, '(555) 999-7774');
+
+1 row created.
+
+SQL> INSERT INTO StorePhone VALUES (100007, '(555) 445-6653');
+
+1 row created.
+
+SQL> INSERT INTO StorePhone VALUES (100008, '(555) 445-0089');
+
+1 row created.
+
+SQL> INSERT INTO StorePhone VALUES (100009, '(555) 673-6598');
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> -- XBOX: Series X retail
+SQL> INSERT INTO ItemPrices VALUES (100000, '$599.99');
+
+1 row created.
+
+SQL> -- XBOX: Series X discount
+SQL> INSERT INTO ItemPrices VALUES (100000, '$499.99');
+
+1 row created.
+
+SQL> --
+SQL> -- XBOX: Series S retail
+SQL> INSERT INTO ItemPrices VALUES (100001, '$299.99');
+
+1 row created.
+
+SQL> -- XBOX: Series S discount
+SQL> INSERT INTO ItemPrices VALUES (100001, '$249.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Halo Infinite retail
+SQL> INSERT INTO ItemPrices VALUES (100002, '$59.99');
+
+1 row created.
+
+SQL> -- Halo Infinite discount
+SQL> INSERT INTO ItemPrices VALUES (100002, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Call of Duty Vanguard: XBOX Version retail
+SQL> INSERT INTO ItemPrices VALUES (100003, '$59.99');
+
+1 row created.
+
+SQL> -- Call of Duty Vanguard: XBOX Version discount
+SQL> INSERT INTO ItemPrices VALUES (100003, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Battlefield 2042: XBOX Version retail
+SQL> INSERT INTO ItemPrices VALUES (100004, '$59.99');
+
+1 row created.
+
+SQL> -- Battlefield 2042: XBOX Version discount
+SQL> INSERT INTO ItemPrices VALUES (100004, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- XBOX Controller (Basic) retail
+SQL> INSERT INTO ItemPrices VALUES (100005, '$59.99');
+
+1 row created.
+
+SQL> -- XBOX Controller (Basic) discount
+SQL> INSERT INTO ItemPrices VALUES (100005, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- XBOX Elite Controller retail
+SQL> INSERT INTO ItemPrices VALUES (100006, '$129.99');
+
+1 row created.
+
+SQL> -- XBOX Elite Controller discount
+SQL> INSERT INTO ItemPrices VALUES (100006, '$89.99');
+
+1 row created.
+
+SQL> --
+SQL> -- PlayStation 5 retail
+SQL> INSERT INTO ItemPrices VALUES (200000, '$599.99');
+
+1 row created.
+
+SQL> -- PlayStation 5 discoun
+SQL> INSERT INTO ItemPrices VALUES (200000, '$499.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Call of Duty Vanguard: PlayStation Version retail
+SQL> INSERT INTO ItemPrices VALUES (200001, '$59.99');
+
+1 row created.
+
+SQL> -- Call of Duty Vanguard: PlayStation Version discount
+SQL> INSERT INTO ItemPrices VALUES (200001, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Battlefield 2042: PlayStation Version retail
+SQL> INSERT INTO ItemPrices VALUES (200002, '$59.99');
+
+1 row created.
+
+SQL> -- Battlefield 2042: PlayStation Version discount
+SQL> INSERT INTO ItemPrices VALUES (200002, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- God of War (2018) retail
+SQL> INSERT INTO ItemPrices VALUES (200003, '$59.99');
+
+1 row created.
+
+SQL> -- God of War (2018) discount
+SQL> INSERT INTO ItemPrices VALUES (200003, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- PlayStation 5 Controller retail
+SQL> INSERT INTO ItemPrices VALUES (200004, '$59.99');
+
+1 row created.
+
+SQL> -- PlayStation 5 Controller discount
+SQL> INSERT INTO ItemPrices VALUES (200004, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- PlayStation 5 Scuff Controller retail
+SQL> INSERT INTO ItemPrices VALUES (200005, '$99.99');
+
+1 row created.
+
+SQL> -- PlayStation 5 Scuff Controller discount
+SQL> INSERT INTO ItemPrices VALUES (200005, '$69.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Nintendo Switch retail
+SQL> INSERT INTO ItemPrices VALUES (300000, '$299.99');
+
+1 row created.
+
+SQL> -- Nintendo Switch discount
+SQL> INSERT INTO ItemPrices VALUES (300000, '$229.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Nintendo Switch Lite retail
+SQL> INSERT INTO ItemPrices VALUES (300001, '$199.99');
+
+1 row created.
+
+SQL> -- Nintendo Switch Lite discount
+SQL> INSERT INTO ItemPrices VALUES (300001, '$119.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Pokemon: Brilliant Diamond retail
+SQL> INSERT INTO ItemPrices VALUES (300002, '$59.99');
+
+1 row created.
+
+SQL> -- Pokemon: Brilliant Diamond discount
+SQL> INSERT INTO ItemPrices VALUES (300002, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Pokemon: Shining Pearl retail
+SQL> INSERT INTO ItemPrices VALUES (300003, '$59.99');
+
+1 row created.
+
+SQL> -- Pokemon: Shining Pearl discount
+SQL> INSERT INTO ItemPrices VALUES (300003, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Mario Kart 8: Deluxe retail
+SQL> INSERT INTO ItemPrices VALUES (300004, '$59.99');
+
+1 row created.
+
+SQL> -- Mario Kart 8: Deluxe discount
+SQL> INSERT INTO ItemPrices VALUES (300004, '$39.99');
+
+1 row created.
+
+SQL> --
+SQL> -- Joy-Con Controller Pack (Pack of 2) retail
+SQL> INSERT INTO ItemPrices VALUES (300005, '$79.99');
+
+1 row created.
+
+SQL> -- Joy-Con Controller Pack (Pack of 2) discount
+SQL> INSERT INTO ItemPrices VALUES (300005, '$49.99');
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> INSERT INTO GoesTo VALUES (100000, 100001, 100002, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100000, 100001, 100003, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100000, 100001, 100004, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100000, 100001, 200001, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100000, 100001, 200002, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100000, 100001, 200003, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100000, 100001, 300002, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100000, 100001, 300003, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100000, 100001, 300004, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100001, 100009, 300001, 2, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100002, 100003, 100006, 2, 'true');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100003, 100002, 300005, 4, 'true');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100004, 100009, 100005, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100005, 100003, 300004, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100006, 100004, 100002, 1, 'true');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100007, 100006, 300000, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100008, 100008, 100002, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100009, 100006, 200005, 1, 'true');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100010, 100008, 100004, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100011, 100001, 100001, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100012, 100002, 100000, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100013, 100001, 200000, 1, 'true');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100014, 100003, 200001, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100015, 100002, 200003, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100016, 100005, 100002, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100017, 100007, 300002, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100018, 100008, 300000, 1, 'true');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100019, 100006, 100000, 1, 'true');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100020, 100001, 200000, 2, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100021, 100004, 100004, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100022, 100009, 300004, 1, 'true');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100023, 100005, 100006, 1, 'false');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100024, 100008, 200002, 1, 'true');
+
+1 row created.
+
+SQL> INSERT INTO GoesTo VALUES (100025, 100005, 100003, 1, 'false');
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> INSERT INTO Has VALUES (100000, 100001);
+
+1 row created.
+
+SQL> INSERT INTO Has VALUES (100002, 100004);
+
+1 row created.
+
+SQL> INSERT INTO Has VALUES (100006, 100003);
+
+1 row created.
+
+SQL> INSERT INTO Has VALUES (200000, 100000);
+
+1 row created.
+
+SQL> INSERT INTO Has VALUES (200002, 100008);
+
+1 row created.
+
+SQL> INSERT INTO Has VALUES (200005, 100007);
+
+1 row created.
+
+SQL> INSERT INTO Has VALUES (300000, 100002);
+
+1 row created.
+
+SQL> INSERT INTO Has VALUES (300004, 100006);
+
+1 row created.
+
+SQL> INSERT INTO Has VALUES (300005, 100005);
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> INSERT INTO Manages VALUES (100000, 200000);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100000, 200003);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100000, 200012);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100000, 200018);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100001, 200009);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100001, 200011);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100001, 200013);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100001, 200019);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100002, 200010);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100002, 200017);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100003, 200008);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100004, 200001);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100004, 200006);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100005, 200007);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100005, 200016);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100006, 200004);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100006, 200020);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100007, 200002);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100007, 200014);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100008, 200005);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100008, 200015);
+
+1 row created.
+
+SQL> INSERT INTO Manages VALUES (100008, 200021);
+
+1 row created.
+
+SQL> --------------------------------------------------------------------------------------
+SQL> COMMIT;
+
+Commit complete.
+
+SQL> --
+SQL> SELECT * FROM Customers;
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+    100000 Dave            Smith                                                
+332 Michigan Ave.                                  (555) 333-2222               
+dsmith@gmail.com                                                                
+                                                                                
+    100001 Joe             Smith                                                
+324 Niles Ave.                                     (555) 444-1111               
+jsmith@gmail.com                                                                
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+                                                                                
+    100002 Max             Albon                                                
+443 Lakeshore Dr.                                  (555) 543-2353               
+malbon@gmail.com                                                                
+                                                                                
+    100003 Liv             Reeves                                               
+3321 Lincoln Ave.                                  (555) 876-0966               
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+lreeves@gmail.com                                                               
+                                                                                
+    100004 Bill            Guy                                                  
+987 Niles Ave.                                                                  
+                                                                                
+                                                                                
+    100005 Justin          Smith                                                
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+312 Lakeshore Ave.                                 (555) 777-4545               
+                                                                                
+                                                                                
+    100006 Ryan            Mercer                                               
+1543 2nd St.                                       (555) 652-7777               
+rmercer@gmail.com                                                               
+                                                                                
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+    100007 Jack            Batler                                               
+3112 6th St.                                       (555) 888-8272               
+                                                                                
+                                                                                
+    100008 Peyton          Handy                                                
+3262 Bush Dr.                                      (555) 545-7828               
+phandy@gmail.com                                                                
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+                                                                                
+    100009 Jo              Reeves                                               
+3001 10th St.                                                                   
+jreeves@gmail.com                                                               
+                                                                                
+    100010 Bo              Term                                                 
+1872 Bush Dr.                                                                   
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+                                                                                
+                                                                                
+    100011 Nate            Boon                                                 
+884 Michigan Ave.                                  (555) 000-5050               
+                                                                                
+                                                                                
+    100012 Kim             Palhamus                                             
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+4112 Lincoln Ave.                                  (555) 450-4504               
+kpalhamus@gmail.com                                                             
+                                                                                
+    100013 Troy            Jones                                                
+112 Michigan Ave.                                  (555) 955-4222               
+tjones@gmail.com                                                                
+                                                                                
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+    100014 Vic             Brown                                                
+394 Lakeshore Dr.                                  (555) 564-4547               
+vbrown@gmail.com                                                                
+                                                                                
+    100015 Olivia          Ruth                                                 
+1165 Lincoln Ave.                                  (555) 840-0875               
+oruth@gmail.com                                                                 
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+                                                                                
+    100016 John            Babalon                                              
+3920 16th St.                                                                   
+                                                                                
+                                                                                
+    100017 Jon             Smith                                                
+2316 Obama Dr.                                                                  
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+                                                                                
+                                                                                
+    100018 Frank           Gulag                                                
+2562 Bush Dr.                                      (555) 684-7782               
+fgulag@gmail.com                                                                
+                                                                                
+    100019 Kevin           Miller                                               
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+2919 7th Ave.                                      (555) 457-7747               
+kmiller@gmail.com                                                               
+                                                                                
+    100020 Tina            Vaught                                               
+622 Michigan Ave.                                  (555) 754-7796               
+                                                                                
+                                                                                
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+    100021 Charlie         Jones                                                
+5841 1st St.                                       (555) 993-9687               
+cjones@gmail.com                                                                
+                                                                                
+    100022 Ignus           Victus                                               
+855 Niles Ave.                                     (555) 378-7875               
+ivictus@gmail.com                                                               
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+                                                                                
+    100023 Myles           Tillery                                              
+6552 14th St.                                      (555) 778-6642               
+mtillery@gmail.com                                                              
+                                                                                
+    100024 Izak            Ruddell                                              
+2826 Bush Dr.                                                                   
+
+CUSTOMERID FIRSTNAME       LASTNAME                                             
+---------- --------------- ---------------                                      
+ADDRESS                                            PHONE                        
+-------------------------------------------------- -------------------------    
+EMAIL                                                                           
+--------------------------------------------------                              
+                                                                                
+                                                                                
+    100025 Ryan            Haynes                                               
+2584 15th St.                                      (555) 877-4455               
+rhaynes@gmail.com                                                               
+                                                                                
+
+26 rows selected.
+
+SQL> SELECT * FROM Stores;
+
+  STORENUM ADDRESS                                                              
+---------- --------------------------------------------------                   
+DISTRICT                                                                        
+--------------------------------------------------                              
+REGION                                             STORESIZE                    
+-------------------------------------------------- --------------------         
+    100000 555 Michigan Ave.                                                    
+D1-1                                                                            
+R1                                                 large                        
+                                                                                
+    100001 3232 Lincoln Ave.                                                    
+D3-1                                                                            
+R3                                                 medium                       
+
+  STORENUM ADDRESS                                                              
+---------- --------------------------------------------------                   
+DISTRICT                                                                        
+--------------------------------------------------                              
+REGION                                             STORESIZE                    
+-------------------------------------------------- --------------------         
+                                                                                
+    100002 423 Lakeshore Dr.                                                    
+D1-2                                                                            
+R1                                                 medium                       
+                                                                                
+    100003 3344 1st St.                                                         
+D2-2                                                                            
+
+  STORENUM ADDRESS                                                              
+---------- --------------------------------------------------                   
+DISTRICT                                                                        
+--------------------------------------------------                              
+REGION                                             STORESIZE                    
+-------------------------------------------------- --------------------         
+R2                                                 small                        
+                                                                                
+    100004 3333 16th St.                                                        
+D2-1                                                                            
+R2                                                 medium                       
+                                                                                
+    100005 7684 7th St.                                                         
+
+  STORENUM ADDRESS                                                              
+---------- --------------------------------------------------                   
+DISTRICT                                                                        
+--------------------------------------------------                              
+REGION                                             STORESIZE                    
+-------------------------------------------------- --------------------         
+D2-3                                                                            
+R2                                                 medium                       
+                                                                                
+    100006 9090 Obama Dr.                                                       
+D3-2                                                                            
+R3                                                 small                        
+                                                                                
+
+  STORENUM ADDRESS                                                              
+---------- --------------------------------------------------                   
+DISTRICT                                                                        
+--------------------------------------------------                              
+REGION                                             STORESIZE                    
+-------------------------------------------------- --------------------         
+    100007 1231 Bush Dr.                                                        
+D3-3                                                                            
+R3                                                 large                        
+                                                                                
+    100008 543 Niles Ave.                                                       
+D1-3                                                                            
+R1                                                 medium                       
+
+  STORENUM ADDRESS                                                              
+---------- --------------------------------------------------                   
+DISTRICT                                                                        
+--------------------------------------------------                              
+REGION                                             STORESIZE                    
+-------------------------------------------------- --------------------         
+                                                                                
+    100009 123 River Ave.                                                       
+D3-2                                                                            
+R3                                                 large                        
+                                                                                
+
+10 rows selected.
+
+SQL> SELECT * FROM Items;
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    100006                                                                      
+Premium controller for XBOX                                                     
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+XBOX Elite Controller                                                           
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$2.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    200004                                                                      
+Controller for PlayStation 5                                                    
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+PlayStation 5 Controller                                                        
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$2.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    200005                                                                      
+Premium controller for PlayStation 5                                            
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+PlayStation 5 Scuff Controller                                                  
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$2.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    300005                                                                      
+Controller for Nintendo Switch                                                  
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Joy-Con Controller Pack (Pack of 2)                                             
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$2.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    100000                                                                      
+A top of the line console from Microsoft, the XBOX: Series X boasts up to 120FPS
+ and 4K visuals.                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+XBOX: Series X                                                                  
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$9.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    100001                                                                      
+A superior gaming console from Microsoft, the XBOX: Series S is an all digital, 
+lightweight console for avid gamers.                                            
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+XBOX: Series S                                                                  
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$10.99/mo                                                                       
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    200000                                                                      
+A top gaming console from Sony, the PlayStation 5 offers up to 120FPS, stunning 
+visuals, and incredible performance.                                            
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+PlayStation 5                                                                   
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$9.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    300000                                                                      
+The newest and best console from Nintendo. The Nintendo Switch offers incredible
+ exclusives you wont find anywhere else.                                        
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Nintendo Switch                                                                 
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$9.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    300001                                                                      
+For on-the-go gamers, the Nintendo Switch Lite is a dedicated handheld console t
+hat you can take anywhere.                                                      
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Nintendo Switch Lite                                                            
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$8.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    100002                                                                      
+Shooter game for XBOX.                                                          
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Halo Infinite                                                                   
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$4.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    100003                                                                      
+Shooter game for XBOX.                                                          
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Call of Duty Vanguard: XBOX Version                                             
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$4.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    100004                                                                      
+Shooter game for XBOX.                                                          
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Battlefield 2042: XBOX Version                                                  
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$4.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    200001                                                                      
+Shooter game for PlayStation 5.                                                 
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Call of Duty Vanguard: PlayStation 5 Version                                    
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$4.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    200002                                                                      
+Shooter game for PlayStation 5.                                                 
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Battlefield 2042: PlayStation 5 Version                                         
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$4.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    200003                                                                      
+Action game for PlayStation 5.                                                  
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+God of War (2018)                                                               
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$4.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    300002                                                                      
+Catch Pokemon and battle with other trainers in Pokemon: Brilliant Diamond.     
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Pokemon: Brilliant Diamond                                                      
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$4.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    300003                                                                      
+Catch Pokemon and battle with other trainers in Pokemon: Shining Pearl.         
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Pokemon: Shining Pearl                                                          
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$4.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    300004                                                                      
+Race with friends, family, and players all around the world in the newest Mario 
+Kart game, Mario Kart 8: Deluxe.                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Mario Kart 8: Deluxe                                                            
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$4.99/mo                                                                        
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+    100005                                                                      
+Controller compatible with XBOX: Series X, and XBOX: Series S                   
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+XBOX Controller (Basic)                                                         
+
+ SERIALNUM                                                                      
+----------                                                                      
+DESCRIPTION                                                                     
+--------------------------------------------------------------------------------
+NAME                                                                            
+--------------------------------------------------------------------------------
+RENTALRATE                                                                      
+---------------                                                                 
+                                                                                
+                                                                                
+                                                                                
+$2.99/mo                                                                        
+                                                                                
+
+19 rows selected.
+
+SQL> SELECT * FROM Orders;
+
+  ORDERNUM ORDERDATE           LINEID  MANAGERID                                
+---------- --------------- ---------- ----------                                
+    100000 10/10/2021          100000     100006                                
+    100001 10/11/2021          100001     100006                                
+    100002 11/09/2021          100002     100007                                
+    100003 11/12/2021          100003     100003                                
+    100004 11/07/2021          100004     100005                                
+    100005 10/23/2021          100005     100003                                
+    100006 11/16/2021          100006     100007                                
+    100007 11/19/2021          100007     100004                                
+    100008 10/19/2021          100008     100002                                
+
+9 rows selected.
+
+SQL> SELECT * FROM Managers;
+
+ MANAGERID FIRSTNAME       LASTNAME        GENDER                           AGE 
+---------- --------------- --------------- ------------------------- ---------- 
+PHONE                     ROLE                                                  
+------------------------- -------------------------                             
+    100000 Peyton          Bitfelt         M                                 37 
+(555) 732-8911            regional                                              
+                                                                                
+    100001 Jack            Butler          M                                 45 
+(555) 534-6645            regional                                              
+                                                                                
+    100002 John            Casey           M                                 26 
+(555) 886-7444            district                                              
+                                                                                
+
+ MANAGERID FIRSTNAME       LASTNAME        GENDER                           AGE 
+---------- --------------- --------------- ------------------------- ---------- 
+PHONE                     ROLE                                                  
+------------------------- -------------------------                             
+    100003 Olivia          Stevens         F                                 21 
+(555) 654-9135            general                                               
+                                                                                
+    100004 Evan            Bradford        M                                 32 
+(555) 774-9053            district                                              
+                                                                                
+    100005 Nate            Dean            M                                 43 
+(555) 987-2288            district                                              
+                                                                                
+
+ MANAGERID FIRSTNAME       LASTNAME        GENDER                           AGE 
+---------- --------------- --------------- ------------------------- ---------- 
+PHONE                     ROLE                                                  
+------------------------- -------------------------                             
+    100006 Ryan            Reeves          M                                 31 
+(555) 733-6868            general                                               
+                                                                                
+    100007 Erica           Baptist         F                                 29 
+(555) 228-0280            general                                               
+                                                                                
+    100008 Nate            Marsh           M                                 35 
+(555) 820-6130            regional                                              
+                                                                                
+
+9 rows selected.
+
+SQL> SELECT * FROM Employees;
+
+EMPLOYEEID FIRSTNAME                 LASTNAME        GENDER                     
+---------- ------------------------- --------------- -------------------------  
+       AGE PHONE                       STORENUM                                 
+---------- ------------------------- ----------                                 
+    200000 River                     Johnson         F                          
+        21 (555) 815-6965                100001                                 
+                                                                                
+    200001 Bob                       Dean            M                          
+        19 (555) 833-9166                100002                                 
+                                                                                
+    200002 Bill                      Ruiz            M                          
+        42 (555) 453-2412                100003                                 
+                                                                                
+
+EMPLOYEEID FIRSTNAME                 LASTNAME        GENDER                     
+---------- ------------------------- --------------- -------------------------  
+       AGE PHONE                       STORENUM                                 
+---------- ------------------------- ----------                                 
+    200003 Ryan                      Baldwin         M                          
+        32 (555) 846-5545                100001                                 
+                                                                                
+    200004 Danielle                  Rickwood        F                          
+        19 (555) 456-6645                100004                                 
+                                                                                
+    200005 Jill                      Lauqus          F                          
+        24 (555) 864-6752                100005                                 
+                                                                                
+
+EMPLOYEEID FIRSTNAME                 LASTNAME        GENDER                     
+---------- ------------------------- --------------- -------------------------  
+       AGE PHONE                       STORENUM                                 
+---------- ------------------------- ----------                                 
+    200006 Zach                      Miller          M                          
+        28 (555) 465-0450                100002                                 
+                                                                                
+    200007 Max                       Miller          M                          
+        31 (555) 868-0785                100006                                 
+                                                                                
+    200008 Josh                      Johnson         M                          
+        24 (555) 870-4454                100007                                 
+                                                                                
+
+EMPLOYEEID FIRSTNAME                 LASTNAME        GENDER                     
+---------- ------------------------- --------------- -------------------------  
+       AGE PHONE                       STORENUM                                 
+---------- ------------------------- ----------                                 
+    200009 Tom                       Smith           M                          
+        21 (555) 564-6654                100008                                 
+                                                                                
+    200010 Todd                      Batson          M                          
+        44 (555) 786-0707                100009                                 
+                                                                                
+    200011 Summer                    Smith           F                          
+        31 (555) 868-0078                100008                                 
+                                                                                
+
+EMPLOYEEID FIRSTNAME                 LASTNAME        GENDER                     
+---------- ------------------------- --------------- -------------------------  
+       AGE PHONE                       STORENUM                                 
+---------- ------------------------- ----------                                 
+    200012 Pat                       Miller          M                          
+        46 (555) 087-6680                100001                                 
+                                                                                
+    200013 Sean                      Hitchcock       M                          
+        39 (555) 770-8875                100008                                 
+                                                                                
+    200014 Mark                      Dean            M                          
+        20 (555) 857-7577                100003                                 
+                                                                                
+
+EMPLOYEEID FIRSTNAME                 LASTNAME        GENDER                     
+---------- ------------------------- --------------- -------------------------  
+       AGE PHONE                       STORENUM                                 
+---------- ------------------------- ----------                                 
+    200015 Avery                     Ricktus         F                          
+        30 (555) 312-8785                100005                                 
+                                                                                
+    200016 Eric                      Shellhorn       M                          
+        34 (555) 045-5466                100006                                 
+                                                                                
+    200017 Evan                      Acker           M                          
+        25 (555) 867-5678                100009                                 
+                                                                                
+
+EMPLOYEEID FIRSTNAME                 LASTNAME        GENDER                     
+---------- ------------------------- --------------- -------------------------  
+       AGE PHONE                       STORENUM                                 
+---------- ------------------------- ----------                                 
+    200018 Rick                      Doty            M                          
+        18 (555) 546-6422                100001                                 
+                                                                                
+    200019 Morty                     Johnson         M                          
+        19 (555) 789-6456                100008                                 
+                                                                                
+    200020 Jen                       Dipkey          F                          
+        22 (555) 444-4645                100004                                 
+                                                                                
+
+EMPLOYEEID FIRSTNAME                 LASTNAME        GENDER                     
+---------- ------------------------- --------------- -------------------------  
+       AGE PHONE                       STORENUM                                 
+---------- ------------------------- ----------                                 
+    200021 Troy                      Bell            M                          
+        36 (555) 678-6451                100005                                 
+                                                                                
+
+22 rows selected.
+
+SQL> SELECT * FROM OrderLines;
+
+    LINEID   ORDERNUM ITEMORDERED        QTY   STORENUM                         
+---------- ---------- ----------- ---------- ----------                         
+SHIPMENTTYPE              PRICE           DAYSTOSHIP                            
+------------------------- --------------- ----------                            
+    100000     100000      200000          1     100001                         
+same-day                  $599.99                  1                            
+                                                                                
+    100001     100001      100000          1     100005                         
+express                   $1799.97                 3                            
+                                                                                
+    100002     100002      300000          1     100008                         
+same-day                  $299.99                  1                            
+                                                                                
+
+    LINEID   ORDERNUM ITEMORDERED        QTY   STORENUM                         
+---------- ---------- ----------- ---------- ----------                         
+SHIPMENTTYPE              PRICE           DAYSTOSHIP                            
+------------------------- --------------- ----------                            
+    100003     100003      100006          2     100002                         
+regular                   $259.98                  5                            
+                                                                                
+    100004     100004      100002          1     100006                         
+express                   $179.97                  3                            
+                                                                                
+    100005     100005      300005          4     100002                         
+same-day                  $79.99                   1                            
+                                                                                
+
+    LINEID   ORDERNUM ITEMORDERED        QTY   STORENUM                         
+---------- ---------- ----------- ---------- ----------                         
+SHIPMENTTYPE              PRICE           DAYSTOSHIP                            
+------------------------- --------------- ----------                            
+    100006     100006      300004          1     100009                         
+regular                   $299.95                  5                            
+                                                                                
+    100007     100007      200005          1     100002                         
+express                   $199.98                  3                            
+                                                                                
+    100008     100008      200002          1     100007                         
+regular                   $299.95                  5                            
+                                                                                
+
+9 rows selected.
+
+SQL> SELECT * FROM StorePhone;
+
+  STORENUM PHONE                                                                
+---------- -------------------------                                            
+    100001 (555) 673-9902                                                       
+    100002 (555) 445-4534                                                       
+    100003 (555) 673-4322                                                       
+    100004 (555) 999-3321                                                       
+    100005 (555) 999-6685                                                       
+    100006 (555) 999-7774                                                       
+    100007 (555) 445-6653                                                       
+    100008 (555) 445-0089                                                       
+    100009 (555) 673-6598                                                       
+
+9 rows selected.
+
+SQL> SELECT * FROM ItemPrices;
+
+ SERIALNUM PRICE                                                                
+---------- ---------------                                                      
+    100000 $499.99                                                              
+    100000 $599.99                                                              
+    100001 $249.99                                                              
+    100001 $299.99                                                              
+    100002 $39.99                                                               
+    100002 $59.99                                                               
+    100003 $39.99                                                               
+    100003 $59.99                                                               
+    100004 $39.99                                                               
+    100004 $59.99                                                               
+    100005 $39.99                                                               
+
+ SERIALNUM PRICE                                                                
+---------- ---------------                                                      
+    100005 $59.99                                                               
+    100006 $129.99                                                              
+    100006 $89.99                                                               
+    200000 $499.99                                                              
+    200000 $599.99                                                              
+    200001 $39.99                                                               
+    200001 $59.99                                                               
+    200002 $39.99                                                               
+    200002 $59.99                                                               
+    200003 $39.99                                                               
+    200003 $59.99                                                               
+
+ SERIALNUM PRICE                                                                
+---------- ---------------                                                      
+    200004 $39.99                                                               
+    200004 $59.99                                                               
+    200005 $69.99                                                               
+    200005 $99.99                                                               
+    300000 $229.99                                                              
+    300000 $299.99                                                              
+    300001 $119.99                                                              
+    300001 $199.99                                                              
+    300002 $39.99                                                               
+    300002 $59.99                                                               
+    300003 $39.99                                                               
+
+ SERIALNUM PRICE                                                                
+---------- ---------------                                                      
+    300003 $59.99                                                               
+    300004 $39.99                                                               
+    300004 $59.99                                                               
+    300005 $49.99                                                               
+    300005 $79.99                                                               
+
+38 rows selected.
+
+SQL> SELECT * FROM GoesTo;
+
+CUSTOMERID   STORENUM ITEMPURCHASED   QUANTITY ORDEREDONLINE                    
+---------- ---------- ------------- ---------- ---------------                  
+    100000     100001        100002          1 false                            
+    100000     100001        100003          1 false                            
+    100000     100001        100004          1 false                            
+    100000     100001        200001          1 false                            
+    100000     100001        200002          1 false                            
+    100000     100001        200003          1 false                            
+    100000     100001        300002          1 false                            
+    100000     100001        300003          1 false                            
+    100000     100001        300004          1 false                            
+    100001     100009        300001          2 false                            
+    100002     100003        100006          2 true                             
+
+CUSTOMERID   STORENUM ITEMPURCHASED   QUANTITY ORDEREDONLINE                    
+---------- ---------- ------------- ---------- ---------------                  
+    100003     100002        300005          4 true                             
+    100004     100009        100005          1 false                            
+    100005     100003        300004          1 false                            
+    100006     100004        100002          1 true                             
+    100007     100006        300000          1 false                            
+    100008     100008        100002          1 false                            
+    100009     100006        200005          1 true                             
+    100010     100008        100004          1 false                            
+    100011     100001        100001          1 false                            
+    100012     100002        100000          1 false                            
+    100013     100001        200000          1 true                             
+
+CUSTOMERID   STORENUM ITEMPURCHASED   QUANTITY ORDEREDONLINE                    
+---------- ---------- ------------- ---------- ---------------                  
+    100014     100003        200001          1 false                            
+    100015     100002        200003          1 false                            
+    100016     100005        100002          1 false                            
+    100017     100007        300002          1 false                            
+    100018     100008        300000          1 true                             
+    100019     100006        100000          1 true                             
+    100020     100001        200000          2 false                            
+    100021     100004        100004          1 false                            
+    100022     100009        300004          1 true                             
+    100023     100005        100006          1 false                            
+    100024     100008        200002          1 true                             
+
+CUSTOMERID   STORENUM ITEMPURCHASED   QUANTITY ORDEREDONLINE                    
+---------- ---------- ------------- ---------- ---------------                  
+    100025     100005        100003          1 false                            
+
+34 rows selected.
+
+SQL> SELECT * FROM Has;
+
+ SERIALNUM     LINEID                                                           
+---------- ----------                                                           
+    100000     100001                                                           
+    100002     100004                                                           
+    100006     100003                                                           
+    200000     100000                                                           
+    200002     100008                                                           
+    200005     100007                                                           
+    300000     100002                                                           
+    300004     100006                                                           
+    300005     100005                                                           
+
+9 rows selected.
+
+SQL> SELECT * FROM Manages;
+
+ MANAGERID EMPLOYEEID                                                           
+---------- ----------                                                           
+    100000     200000                                                           
+    100000     200003                                                           
+    100000     200012                                                           
+    100000     200018                                                           
+    100001     200009                                                           
+    100001     200011                                                           
+    100001     200013                                                           
+    100001     200019                                                           
+    100002     200010                                                           
+    100002     200017                                                           
+    100003     200008                                                           
+
+ MANAGERID EMPLOYEEID                                                           
+---------- ----------                                                           
+    100004     200001                                                           
+    100004     200006                                                           
+    100005     200007                                                           
+    100005     200016                                                           
+    100006     200004                                                           
+    100006     200020                                                           
+    100007     200002                                                           
+    100007     200014                                                           
+    100008     200005                                                           
+    100008     200015                                                           
+    100008     200021                                                           
+
+22 rows selected.
+
+SQL> --
+SQL> < The SQL queries>. Include the following for each query:
+SP2-0734: unknown command beginning "< The SQL ..." - rest of line ignored.
+SQL> − A comment line stating the query number and the feature(s) it demonstrates
+SP2-0734: unknown command beginning "− A comm..." - rest of line ignored.
+SQL> (e.g. -- Q25 – correlated subquery).
+  2  − A comment line stating the query in English.
+  3  − The SQL code for the query.
+  4  --
+  5  < The insert/delete/update statements to test the enforcement of ICs >
+  6  Include the following items for every IC that you test (Important: see the next section titled
+  7  “Submit a final report” regarding which ICs you need to test).
+  8  − A comment line stating: Testing: < IC name>
+  9  − A SQL INSERT, DELETE, or UPDATE that will test the IC.
+ 10  COMMIT;
+(e.g. -- Q25 – correlated subquery).
+ *
+ERROR at line 1:
+ORA-00928: missing SELECT keyword 
+
+
+SQL> --
+SQL> SPOOL OFF
